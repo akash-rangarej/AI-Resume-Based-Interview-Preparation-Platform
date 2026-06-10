@@ -1,10 +1,10 @@
 import { useState } from "react";
-import ForgotPassword from "./components/ForgotPassword";
-import Login from "./components/Login";
-import RegistrationPage from "./components/registration_page";
-import ResetPassword from "./components/ResetPassword";
+import ForgotPassword from "./components/Auth/ForgotPassword";
+import Login from "./components/Auth/Login";
+import RegistrationPage from "./components/Auth/registration_page";
+import ResetPassword from "./components/Auth/ResetPassword";
 import "./App.css";
-import AnimatedBackground from "./components/AnimatedBackground";
+import AnimatedBackground from "./components/Auth/AnimatedBackground";
 
 const STORAGE_KEY = "registeredUsers";
 
