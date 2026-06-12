@@ -116,20 +116,6 @@ const handleLogout = () => {
   setPage("login");
 };
 
-if (page === "recruiter-portal") {
-  return (
-  <RecruiterLayout
-  user={currentUser}
-  onLogout={handleLogout}
-  onDeleteAccount={handleDeleteAccount}
->
-      <div className="text-white text-2xl">
-        Recruiter Dashboard
-      </div>
-    </RecruiterLayout>
-  );
-}
-
 const handleDeleteAccount = () => {
   const confirmDelete = window.confirm(
     "Are you sure you want to delete your account?"
@@ -155,6 +141,20 @@ const handleDeleteAccount = () => {
 
   alert("Account deleted successfully.");
 };
+
+if (page === "recruiter-portal") {
+  return (
+  <RecruiterLayout
+  user={currentUser}
+  onLogout={handleLogout}
+  onDeleteAccount={handleDeleteAccount}
+>
+      <div className="text-white text-2xl">
+        Recruiter Dashboard
+      </div>
+    </RecruiterLayout>
+  );
+}
 
 
   let pageContent = (

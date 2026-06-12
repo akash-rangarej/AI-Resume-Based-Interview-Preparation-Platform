@@ -1,59 +1,151 @@
-import React, { useState } from "react";
-import { UploadCloud, FileText, Trash2 } from "lucide-react";
+import { FileText, Trash2, UploadCloud } from "lucide-react";
+import { useState } from "react";
+import api from "../../api/axiosClient";
 
 const MyProfile = ({ user }) => {
   const [resume, setResume] = useState(null);
+  const [loading, setLoading] = useState(false);
 
  const [profileData, setProfileData] = useState({
-  personalDetails: {
-    name: user?.name || "",
-    email: user?.email || "",
-    phone: "",
-  },
+  name: "",
+  phone: "",
+  email: "",
 
-  skills: "",
+  skills: [],
 
-  workExperience: {
-    designation: "",
-    company: "",
-    dates: "",
-    description: "",
-    responsibilities: "",
-  },
+  education: [
+    {
+      institution: "",
+      degree: "",
+      years: "",
+      location: "",
+      gpa: "",  
+    },
+  ],
 
-  projects: {
-    title: "",
-    technologiesUsed: "",
-    description: "",
-  },
+  projects: [
+    {
+      title: "",
+      technologies: [],
+      description: "",
+    },
+  ],
 
-  education: {
-    institution: "",
-    degree: "",
-    location: "",
-    graduationYear: "",
-    gpa: "",
-  },
+  experience: [
+    {
+      designation: "",
+      company: "",
+      dates: "",
+      description: [],
+    },
+  ],
 
-  certifications: {
-    professionalCertification: "",
-  },
+  certifications: [],
 });
 
-  const handleResumeUpload = (e) => {
-    const file = e.target.files[0];
+const formatArrayForInput = (value) => {
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
+  return value || "";
+};
 
-    if (file) {
-      setResume(file);
+const parseCommaSeparated = (value) =>
+  value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 
-      console.log("Resume Uploaded:", file.name);
+const formatDescriptionForInput = (value) => {
+  if (Array.isArray(value)) {
+    return value.join("\n");
+  }
+  return value || "";
+};
 
-      // Later:
-      // Send file to backend
-      // Parse Resume
-      // Auto fill profileData
-    }
-  };
+const parseDescriptionInput = (value) =>
+  value
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const handleResumeUpload = async (e) => {
+  const file = e.target.files[0];
+
+  if (!file) return;
+
+  setResume(file);
+  setLoading(true);
+
+  try {
+    const formData = new FormData();
+    formData.append("resume", file);
+
+    const token = localStorage.getItem("token");
+
+    const response = await api.post(
+      "/candidate/upload-resume",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: token ? `Bearer ${token}` : undefined,
+        },
+      }
+    );
+
+    const parsedData = response.data?.profileData;
+
+    setProfileData({
+      name: parsedData.name || "",
+      phone: parsedData.phone || "",
+      email: parsedData.email || "",
+      skills: parsedData.skills || [],
+      education:
+        parsedData.education?.length > 0
+          ? parsedData.education
+          : [
+              {
+                institution: "",
+                degree: "",
+                years: "",
+                location: "",
+                gpa: "",
+              },
+            ],
+      projects:
+        parsedData.projects?.length > 0
+          ? parsedData.projects
+          : [
+              {
+                title: "",
+                technologies: [],
+                description: "",
+              },
+            ],
+      experience:
+        parsedData.experience?.length > 0
+          ? parsedData.experience
+          : [
+              {
+                designation: "",
+                company: "",
+                dates: "",
+                description: [],
+              },
+            ],
+      certifications:
+        parsedData.certifications || [],
+    
+    });
+
+  } catch (error) {
+    console.error(error);
+    alert("Failed to parse resume.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const removeResume = () => {
     setResume(null);
@@ -62,10 +154,7 @@ const MyProfile = ({ user }) => {
   const handlePersonalChange = (field, value) => {
     setProfileData({
       ...profileData,
-      personalDetails: {
-        ...profileData.personalDetails,
-        [field]: value,
-      },
+      [field]: value,
     });
   };
 
@@ -85,35 +174,54 @@ const MyProfile = ({ user }) => {
       {/* Resume Upload */}
       <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
 
-        <h1 className="text-3xl font-bold text-white mb-2">
-          My Profile
-        </h1>
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  My Profile
+                </h1>
 
-        <p className="text-slate-400 text-sm mb-6">
-          Upload your latest resume for AI-powered analysis.
-        </p>
+                <p className="text-slate-400 text-sm mb-6">
+                  Upload your latest resume for AI-powered analysis.
+                </p>
 
-        <label className="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-2xl p-10 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all">
+                {loading ? (
+          <div className="border-2 border-dashed border-indigo-500 rounded-2xl p-10 flex flex-col items-center justify-center gap-4">
 
-          <UploadCloud className="w-10 h-10 text-indigo-400" />
+            <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
 
-          <div className="text-center">
-            <p className="text-slate-300 font-medium">
-              Drag & Drop Resume
+            <h3 className="text-white font-semibold">
+              Parsing Resume...
+            </h3>
+
+            <p className="text-slate-400 text-sm text-center">
+              Please wait while Gemini extracts your profile information.
             </p>
 
-            <p className="text-slate-500 text-sm">
-              PDF , DOCX , JPEG , JPG , PNG(Max 10MB)
-            </p>
           </div>
+        ) : (
+          <label className="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-2xl p-10 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all">
 
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx,.jpeg,.jpg,.png"
-            className="hidden"
-            onChange={handleResumeUpload}
-          />
-        </label>
+            <UploadCloud className="w-10 h-10 text-indigo-400" />
+
+            <div className="text-center">
+              <p className="text-slate-300 font-medium">
+                Drag & Drop Resume
+              </p>
+
+              <p className="text-slate-500 text-sm">
+                PDF, DOCX, JPEG, JPG, PNG (Max 10MB)
+              </p>
+            </div>
+
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.jpeg,.jpg,.png"
+              className="hidden"
+              onChange={handleResumeUpload}
+            />
+          </label>
+          
+        )}
+
+      
 
         {resume && (
           <div className="mt-6 flex items-center justify-between bg-slate-800/50 rounded-lg p-4">
@@ -148,7 +256,7 @@ const MyProfile = ({ user }) => {
           <input
             type="text"
             placeholder="Full Name"
-            value={profileData.personalDetails.name}
+            value={profileData.name}
             onChange={(e) =>
               handlePersonalChange("name", e.target.value)
             }
@@ -158,7 +266,7 @@ const MyProfile = ({ user }) => {
           <input
             type="email"
             placeholder="Email"
-            value={profileData.personalDetails.email}
+            value={profileData.email}
             onChange={(e) =>
               handlePersonalChange("email", e.target.value)
             }
@@ -168,7 +276,7 @@ const MyProfile = ({ user }) => {
           <input
             type="text"
             placeholder="Phone Number"
-            value={profileData.personalDetails.phone}
+            value={profileData.phone}
             onChange={(e) =>
               handlePersonalChange("phone", e.target.value)
             }
@@ -187,130 +295,327 @@ const MyProfile = ({ user }) => {
         <textarea
           rows="4"
           placeholder="React, Node.js, Python, AWS, Docker"
-          value={profileData.skills}
+          value={formatArrayForInput(profileData.skills)}
           onChange={(e) =>
             setProfileData({
               ...profileData,
-              skills: e.target.value,
+              skills: parseCommaSeparated(e.target.value),
             })
           }
           className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
         />
       </div>
 
-      {/* Work Experience */}
-      <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
+{/* Work Experience */}
+<div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
 
-        <h2 className="text-xl font-semibold text-white mb-4">
-          Work Experience
-        </h2>
+  <h2 className="text-xl font-semibold text-white mb-4">
+    Work Experience
+  </h2>
 
-        <div className="grid md:grid-cols-2 gap-4">
+  {profileData.experience.map((exp, index) => (
+    <div
+      key={index}
+      className="grid md:grid-cols-2 gap-4 mb-6 border border-slate-700 rounded-lg p-4"
+    >
 
-          <input
-            type="text"
-            placeholder="designation"
-            className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-          />
+      <input
+        type="text"
+        placeholder="Designation"
+        className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={exp.designation || ""}
+        onChange={(e) => {
+          const updatedExperience = [...profileData.experience];
+          updatedExperience[index].designation = e.target.value;
 
-          <input
-            type="text"
-            placeholder="company"
-            className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-          />
+          setProfileData({
+            ...profileData,
+            experience: updatedExperience,
+          });
+        }}
+      />
 
-          <input
-            type="text"
-            placeholder="dates"
-            className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-          />
+      <input
+        type="text"
+        placeholder="Company"
+        className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={exp.company || ""}
+        onChange={(e) => {
+          const updatedExperience = [...profileData.experience];
+          updatedExperience[index].company = e.target.value;
 
-           <input
-            type="text"
-            placeholder="description"
-            className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-          />
+          setProfileData({
+            ...profileData,
+            experience: updatedExperience,
+          });
+        }}
+      />
 
-        </div>
+      <input
+        type="text"
+        placeholder="Dates"
+        className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={exp.dates || ""}
+        onChange={(e) => {
+          const updatedExperience = [...profileData.experience];
+          updatedExperience[index].dates = e.target.value;
 
-        <textarea
-          rows="4"
-          placeholder="Responsibilities"
-          className="w-full mt-4 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-        />
-      </div>
+          setProfileData({
+            ...profileData,
+            experience: updatedExperience,
+          });
+        }}
+      />
 
-      {/* Projects */}
-      <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
+      <textarea
+        rows="4"
+        placeholder="Description"
+        className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={formatDescriptionForInput(exp.description)}
+        onChange={(e) => {
+          const updatedExperience = [...profileData.experience];
+          updatedExperience[index].description =
+            parseDescriptionInput(e.target.value);
 
-        <h2 className="text-xl font-semibold text-white mb-4">
-          Projects
-        </h2>
+          setProfileData({
+            ...profileData,
+            experience: updatedExperience,
+          });
+        }}
+      />
 
-        <input
-          type="text"
-          placeholder="Title"
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white mb-4"
-        />
+    </div>
+  ))}
 
-        <input
-          type="text"
-          placeholder="Technologies Used"
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white mb-4"
-        />
+  <button
+    type="button"
+    onClick={() =>
+      setProfileData({
+        ...profileData,
+        experience: [
+          ...profileData.experience,
+          {
+            designation: "",
+            company: "",
+            dates: "",
+            description: [],
+          },
+        ],
+      })
+    }
+    className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+  >
+    + Add Experience
+  </button>
 
-        <textarea
-          rows="4"
-          placeholder="Project Description"
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-        />
+</div>
 
-      </div>
+{/* Projects */}
+<div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
 
-      {/* Education */}
-      <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
+  <h2 className="text-xl font-semibold text-white mb-4">
+    Projects
+  </h2>
 
-        <h2 className="text-xl font-semibold text-white mb-4">
-          Education
-        </h2>
+  {profileData.projects.map((project, index) => (
+    <div
+      key={index}
+      className="mb-6 border border-slate-700 rounded-lg p-4"
+    >
 
-        <div className="grid md:grid-cols-3 gap-4">
+      <input
+        type="text"
+        placeholder="Title"
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white mb-4"
+        value={project.title || ""}
+        onChange={(e) => {
+          const updatedProjects = [...profileData.projects];
+          updatedProjects[index].title = e.target.value;
 
+          setProfileData({
+            ...profileData,
+            projects: updatedProjects,
+          });
+        }}
+      />
 
-             <input
-            type="text"
-            placeholder="Institution"
-            className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-          />
+      <input
+        type="text"
+        placeholder="Technologies Used"
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white mb-4"
+        value={formatArrayForInput(project.technologies)}
+        onChange={(e) => {
+          const updatedProjects = [...profileData.projects];
+          updatedProjects[index].technologies =
+            parseCommaSeparated(e.target.value);
 
-          <input
-            type="text"
-            placeholder="Degree"
-            className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-          />
+          setProfileData({
+            ...profileData,
+            projects: updatedProjects,
+          });
+        }}
+      />
 
-          <input
-            type="text"
-            placeholder="Location"
-            className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-          />
+      <textarea
+        rows="4"
+        placeholder="Project Description"
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={project.description || ""}
+        onChange={(e) => {
+          const updatedProjects = [...profileData.projects];
+          updatedProjects[index].description = e.target.value;
 
-          <input
-            type="text"
-            placeholder="Graduation Year"
-            className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-          />
+          setProfileData({
+            ...profileData,
+            projects: updatedProjects,
+          });
+        }}
+      />
 
-          
-          <input
-            type="text"
-            placeholder="GPA"
-            className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
-          />
+    </div>
+  ))}
 
+  <button
+    type="button"
+    onClick={() =>
+      setProfileData({
+        ...profileData,
+        projects: [
+          ...profileData.projects,
+          {
+            title: "",
+            technologies: [],
+            description: "",
+          },
+        ],
+      })
+    }
+    className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+  >
+    + Add Project
+  </button>
 
-        </div>
-      </div>
+</div>
+
+    {/* Education */}
+<div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
+
+  <h2 className="text-xl font-semibold text-white mb-4">
+    Education
+  </h2>
+
+  {profileData.education.map((edu, index) => (
+    <div
+      key={index}
+      className="grid md:grid-cols-3 gap-4 mb-6 border border-slate-700 rounded-lg p-4"
+    >
+
+      <input
+        type="text"
+        placeholder="Institution"
+        className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={edu.institution || ""}
+        onChange={(e) => {
+          const updatedEducation = [...profileData.education];
+          updatedEducation[index].institution = e.target.value;
+
+          setProfileData({
+            ...profileData,
+            education: updatedEducation,
+          });
+        }}
+      />
+
+      <input
+        type="text"
+        placeholder="Degree"
+        className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={edu.degree || ""}
+        onChange={(e) => {
+          const updatedEducation = [...profileData.education];
+          updatedEducation[index].degree = e.target.value;
+
+          setProfileData({
+            ...profileData,
+            education: updatedEducation,
+          });
+        }}
+      />
+
+      <input
+        type="text"
+        placeholder="Location"
+        className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={edu.location || ""}
+        onChange={(e) => {
+          const updatedEducation = [...profileData.education];
+          updatedEducation[index].location = e.target.value;
+
+          setProfileData({
+            ...profileData,
+            education: updatedEducation,
+          });
+        }}
+      />
+
+      <input
+        type="text"
+        placeholder="Graduation Year"
+        className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={edu.years || ""}
+        onChange={(e) => {
+          const updatedEducation = [...profileData.education];
+          updatedEducation[index].years = e.target.value;
+
+          setProfileData({
+            ...profileData,
+            education: updatedEducation,
+          });
+        }}
+      />
+
+      <input
+        type="text"
+        placeholder="GPA"
+        className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-white"
+        value={edu.gpa || ""}
+        onChange={(e) => {
+          const updatedEducation = [...profileData.education];
+          updatedEducation[index].gpa = e.target.value;
+
+          setProfileData({
+            ...profileData,
+            education: updatedEducation,
+          });
+        }}
+      />
+
+    </div>
+  ))}
+
+  <button
+    type="button"
+    onClick={() =>
+      setProfileData({
+        ...profileData,
+        education: [
+          ...profileData.education,
+          {
+            institution: "",
+            degree: "",
+            years: "",
+            location: "",
+            gpa: "",
+          },
+        ],
+      })
+    }
+    className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+  >
+    + Add Education
+  </button>
+
+</div>
 
       {/* Certifications */}
       <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
@@ -323,6 +628,13 @@ const MyProfile = ({ user }) => {
           type="text"
           placeholder="Professional Certifications"
           className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white mb-4"
+          value={formatArrayForInput(profileData.certifications)}
+          onChange={(e) =>
+            setProfileData({
+              ...profileData,
+              certifications: parseCommaSeparated(e.target.value),
+            })
+          }
         />
       </div>
 
@@ -339,7 +651,7 @@ const MyProfile = ({ user }) => {
       </div>
 
     </div>
-  );
+  )
 };
 
 export default MyProfile;

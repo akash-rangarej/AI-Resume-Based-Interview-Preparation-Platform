@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 
-const RecruiterLayout = ({ children, onLogout, user }) => {
+const RecruiterLayout = ({ children, onLogout,  onDeleteAccount ,user }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("Search Candidates");
@@ -117,7 +117,15 @@ const RecruiterLayout = ({ children, onLogout, user }) => {
                 Reports
               </button>
 
-              <hr className="border-slate-800 my-2" />
+            <hr className="border-slate-800 my-2" />
+
+              <button
+                onClick={onDeleteAccount}
+                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-red-950/30"
+              >
+                <User className="w-4 h-4" />
+                Delete Account
+              </button>
 
               <button
                 onClick={onLogout}
